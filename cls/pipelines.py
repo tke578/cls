@@ -17,6 +17,9 @@ from scrapy.exceptions import DropItem
 from pymongo import MongoClient
 from scrapy import log
 import code
+from lxml import html
+import requests
+
 
 
 class MongoDBPipeline(object):
@@ -39,7 +42,7 @@ class MongoDBPipeline(object):
                 valid = False
                 raise DropItem("Missing {0}!".format(data))
 
-        if self.is_unique(item) == False:
+        if self.is_unique(item) is False:
             valid = False
             raise DropItem("Scraped post already exists with no changes: %s"  % data)
 
@@ -59,5 +62,23 @@ class MongoDBPipeline(object):
                     return False
 
     def close_spider(self,spider):
+        if len(self.posts_with_status_new) > 0:
+            for post in self.posts_with_status_new:
+                
+                page = requests.get(post['url'])
+                tree = html.fromstring(page.content)
+                if len(tree.xpath('//div[@class="post-not-found"]/h1/text()'))  == 1:
+                    self.collection.update({ "uuid" : post['uuid']}, { "$set": { "post_status": "not-found", "status_changed": "new Date()"}})
+                else:
+                    code.interact(local=dict(globals(), **locals()))
+
         
+         # print('Closing {} spider'.format(spider.name))
+
+        # get_response(self)
+        # self.get_response(self)
+        # return scrapy.Request("http://www.example.com/some_page.html",
+                          # get_response)
+        # yield Request(self.posts_with_status_new[1]['url'], get_response, meta={'URL': absolute_url, 'Title': title, 'Address':address})
+
 

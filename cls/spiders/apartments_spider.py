@@ -6,7 +6,8 @@ from scrapy import Request
 class JobsSpider(scrapy.Spider):
     name = "jobs"
     allowed_domains = ["craigslist.org"]
-    start_urls = ["https://sfbay.craigslist.org/search/sfc/roo"]
+    # start_urls = ["https://sfbay.craigslist.org/search/sfc/roo"]
+    start_urls = ["https://sfbay.craigslist.org/search/sfc/roo?s=2400"]
 
     def parse(self, response):
         jobs = response.xpath('//p[@class="result-info"]')
@@ -20,7 +21,8 @@ class JobsSpider(scrapy.Spider):
             yield Request(absolute_url, callback=self.parse_page, meta={'URL': absolute_url, 'Title': title, 'Address':address})
 
     	relative_next_url = response.xpath('//a[@class="button next"]/@href').extract_first()
-    	absolute_next_url = "https://sfbay.craigslist.org/search/sfc/roo" + relative_next_url
+        # absolute_next_url = "https://sfbay.craigslist.org/search/sfc/roo" + relative_next_url
+    	absolute_next_url = "https://sfbay.craigslist.org/search/sfc/roo?s=2400" + relative_next_url
     	yield Request(absolute_next_url, callback=self.parse)
 
     def parse_page(self, response):
