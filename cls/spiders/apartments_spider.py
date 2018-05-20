@@ -4,25 +4,25 @@ import hashlib
 from scrapy import Request
 
 class JobsSpider(scrapy.Spider):
-    name = "jobs"
+    name = "rooms"
     allowed_domains = ["craigslist.org"]
-    # start_urls = ["https://sfbay.craigslist.org/search/sfc/roo"]
-    start_urls = ["https://sfbay.craigslist.org/search/sfc/roo?s=2400"]
+    start_urls = ["https://sfbay.craigslist.org/search/sfc/roo"]
+    # start_urls = ["https://sfbay.craigslist.org/search/sfc/roo?s=2280"]
 
     def parse(self, response):
-        jobs = response.xpath('//p[@class="result-info"]')
+        rooms = response.xpath('//p[@class="result-info"]')
 
-        for job in jobs:
-            relative_url = job.xpath('a/@href').extract_first()
+        for room in rooms:
+            relative_url = room.xpath('a/@href').extract_first()
             absolute_url = response.urljoin(relative_url)
-            title = job.xpath('a/text()').extract_first()
-            address = job.xpath('span[@class="result-meta"]/span[@class="result-hood"]/text()').extract_first("")[2:-1]
+            title = room.xpath('a/text()').extract_first()
+            address = room.xpath('span[@class="result-meta"]/span[@class="result-hood"]/text()').extract_first("")[2:-1]
 
             yield Request(absolute_url, callback=self.parse_page, meta={'URL': absolute_url, 'Title': title, 'Address':address})
 
     	relative_next_url = response.xpath('//a[@class="button next"]/@href').extract_first()
-        # absolute_next_url = "https://sfbay.craigslist.org/search/sfc/roo" + relative_next_url
-    	absolute_next_url = "https://sfbay.craigslist.org/search/roo?s=2880"
+        absolute_next_url = "https://sfbay.craigslist.org/search/sfc/roo" + relative_next_url
+    	# absolute_next_url = "https://sfbay.craigslist.org/search/roo?s=2880"
     	yield Request(absolute_next_url, callback=self.parse)
 
     def parse_page(self, response):
