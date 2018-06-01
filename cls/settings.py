@@ -70,6 +70,7 @@ MONGODB_SERVER = "localhost"
 MONGODB_PORT = 27017
 MONGODB_DB = "craigslist"
 MONGODB_COLLECTION = "rooms"
+MONGODB_STATS = "stats"
 #ITEM_PIPELINES = {
 #    'cls.pipelines.ClsPipeline': 300,
 #}

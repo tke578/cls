@@ -22,7 +22,7 @@ class JobsSpider(scrapy.Spider):
 
     	relative_next_url = response.xpath('//a[@class="button next"]/@href').extract_first()
         absolute_next_url = "https://sfbay.craigslist.org/search/sfc/roo" + relative_next_url
-    	# absolute_next_url = "https://sfbay.craigslist.org/search/roo?s=2880"
+    	# absolute_next_url = "https://sfbay.craigslist.org/search/sfc/roo?s=2280"
     	yield Request(absolute_next_url, callback=self.parse)
 
     def parse_page(self, response):
