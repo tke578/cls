@@ -22,6 +22,7 @@ from scrapy import signals
 import logging
 import requests
 import datetime
+from time import sleep
 
 
 
@@ -94,6 +95,8 @@ class MongoDBPipeline(object):
 
             for i in self.list_of_uuids:
                 post = self.collection.find_one({"uuid": i})
+                # requests gets max entries
+                sleep(0.5)
                 page = requests.get(post['url'])
                 tree = html.fromstring(page.content)
                 if page.status_code == 404:
@@ -124,7 +127,6 @@ class MongoDBPipeline(object):
                     from pdb import set_trace; set_trace()
 
         
-
         print('Closing {} spider'.format(spider.name))
 
 
