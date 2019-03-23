@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 
 # Scrapy settings for cls project
@@ -66,9 +67,9 @@ DOWNLOAD_DELAY = 0.750
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {'cls.pipelines.MongoDBPipeline': 300, }
 
-MONGODB_SERVER = "localhost"
-MONGODB_PORT = 27017
-MONGODB_DB = "craigslist"
+MONGODB_SERVER = os.environ['MONGODB_URI']
+# MONGODB_PORT = 27017
+MONGODB_DB = os.environ['MONGODB_DB']
 MONGODB_COLLECTION = "rooms"
 MONGODB_STATS = "stats"
 #ITEM_PIPELINES = {

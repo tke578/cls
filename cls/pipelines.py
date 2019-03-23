@@ -32,10 +32,9 @@ class MongoDBPipeline(object):
         self.stats = stats
         # signals finish stats when spider closes
         dispatcher.connect(self.save_crawl_stats,signals.spider_closed)
-        connection = pymongo.MongoClient(
-            settings['MONGODB_SERVER'],
-            settings['MONGODB_PORT']
-        )
+        connection =MongoClient(
+            settings['MONGODB_SERVER']
+           )
         db = connection[settings['MONGODB_DB']]
         self.collection = db[settings['MONGODB_COLLECTION']]
         self.collection_stats = db[settings['MONGODB_STATS']]
@@ -66,8 +65,7 @@ class MongoDBPipeline(object):
                 valid = False
                 raise DropItem("Missing {0}!".format(data))
 
-        
-        if self.list_of_uuids:
+        if hasattr(self, 'list_of_uuids'):
             if self.is_unique(item) is False:
                 valid = False
                 raise DropItem("Scraped post already exists with no changes: %s"  % data)
