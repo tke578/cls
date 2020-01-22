@@ -65,11 +65,9 @@ DOWNLOAD_DELAY = 0.750
 
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
-ITEM_PIPELINES = {'cls.pipelines.MongoDBPipeline': 300, }
-
-MONGODB_SERVER = os.environ['MONGODB_URI']
-# MONGODB_PORT = 27017
-MONGODB_DB = os.environ['MONGODB_DB']
+ITEM_PIPELINES = {'cls.pipelines.MongoDBPipeline': 300 }
+MONGODB_DB = "cls"
+MONGO_URI = os.environ['MONGO_URI']
 MONGODB_COLLECTION = "rooms"
 MONGODB_STATS = "stats"
 #ITEM_PIPELINES = {

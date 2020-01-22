@@ -10,38 +10,34 @@
 #     def process_item(self, item, spider):
 #         return item
 
-import pymongo
-
-from scrapy.conf import settings
+from scrapy.utils.project import get_project_settings
 from scrapy.exceptions import DropItem
 from pymongo import MongoClient
-from scrapy import log
 from lxml import html
-from scrapy.xlib.pydispatch import dispatcher
 from scrapy import signals
 import logging
 import requests
 import datetime
 from time import sleep
 
-
+SETTINGS = get_project_settings()
+logger = logging.getLogger(__name__)
 
 class MongoDBPipeline(object):
 
     def __init__(self, stats, settings):
         self.stats = stats
-        # signals finish stats when spider closes
-        dispatcher.connect(self.save_crawl_stats,signals.spider_closed)
-        connection =MongoClient(
-            settings['MONGODB_SERVER']
+        connection = MongoClient(
+            settings['MONGO_URI']
            )
         db = connection[settings['MONGODB_DB']]
         self.collection = db[settings['MONGODB_COLLECTION']]
         self.collection_stats = db[settings['MONGODB_STATS']]
+        
         # retrieve records only with new post status and attibute of uuid
         uuids_collection = list(self.collection.find({"post_status": "new"}, { "uuid": 1 }))
         if len(uuids_collection) > 0 : self.list_of_uuids = list(map(lambda x: x['uuid'], uuids_collection))
-        log.msg("MongoDBPipeline has been initialize!")
+        logger.debug("MongoDBPipeline has been initialize!")
 
     
     @classmethod
@@ -72,8 +68,7 @@ class MongoDBPipeline(object):
 
         if valid:
             self.collection.insert(dict(item))
-            log.msg("Post added to database!",
-                    level=log.DEBUG, spider=spider)
+            logger.debug("Post added to database!", dict(item))
         return item
 
     
