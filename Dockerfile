@@ -15,7 +15,7 @@ curl \
 
 ENV TZ=America/Los_Angeles
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
 
 WORKDIR /app
 COPY ./requirements.txt /app
@@ -31,4 +31,5 @@ RUN pip install --upgrade pip
 RUN pip3 install -r requirements.txt
 
 
-CMD [ "echo", "Spider is ready to be executed!"]
+
+CMD [ "scrapy", "crawl rooms"]
