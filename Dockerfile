@@ -15,7 +15,7 @@ curl \
 
 ENV TZ=America/Los_Angeles
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
 WORKDIR /app
 COPY ./requirements.txt /app
