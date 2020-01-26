@@ -67,7 +67,7 @@ class JobsSpider(scrapy.Spider):
                            ).extract_first()
         updated_posting_time = \
             response.xpath('//div[@class="postinginfos"]/p[3]/time/text()'
-                           ).extract_first() or 'n/a'
+                           ).extract_first() or None
         uuid = hashlib.md5((posting_id + posting_time
                            + updated_posting_time
                            + sanitize_desc).encode('utf-8')).hexdigest()
