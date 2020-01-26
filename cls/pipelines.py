@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
-
-
-# class ClsPipeline(object):
-#     def process_item(self, item, spider):
-#         return item
 
 from scrapy.utils.project import get_project_settings
 from scrapy.exceptions import DropItem
@@ -17,8 +6,10 @@ from lxml import html
 from scrapy import signals
 import logging
 import requests
-import datetime
+from datetime import datetime
 from time import sleep
+from cls.utilities import Slack
+from cls.settings import SLACK_CHANNEL
 
 SETTINGS = get_project_settings()
 logger = logging.getLogger(__name__)
@@ -27,6 +18,7 @@ class MongoDBPipeline(object):
 
     def __init__(self, stats, settings):
         self.stats = stats
+        self.slack_client = Slack()
         connection = MongoClient(
             settings['MONGO_URI']
            )
@@ -36,7 +28,8 @@ class MongoDBPipeline(object):
         
         # retrieve records only with new post status and attibute of uuid
         uuids_collection = list(self.collection.find({"post_status": "new"}, { "uuid": 1 }))
-        if len(uuids_collection) > 0 : self.list_of_uuids = list(map(lambda x: x['uuid'], uuids_collection))
+        if len(uuids_collection) > 0: 
+            self.list_of_uuids = list(map(lambda x: x['uuid'], uuids_collection))
         logger.debug("MongoDBPipeline has been initialize!")
 
     
@@ -49,17 +42,20 @@ class MongoDBPipeline(object):
         tmp_end_time = self.stats.get_value('finish_time').strftime("%Y-%m-%d %I:%M:%S%p")
         self.stats.set_value('start_time', tmp_start_time)
         self.stats.set_value('finish_time', tmp_end_time)
-        self.stats.set_value('created_at', datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S%p"))
+        self.stats.set_value('created_at', datetime.now().strftime("%Y-%m-%d %I:%M:%S%p"))
 
         self.collection_stats.insert_one(self.stats.get_stats()).inserted_id
 
     def process_item(self, item, spider):
+        #check for missing fields
         valid = True
         for data in item:
-            
             if not data:
                 valid = False
-                raise DropItem("Missing {0}!".format(data))
+                msg = f'Missing {data}!'
+                error_msg = self.slack_client.send_message(msg, channel={"name": SLACK_CHANNEL})
+                self.slack_client.send_message(f'`{item}`', thread=error_msg['thread'], channel={"name": SLACK_CHANNEL})
+                raise DropItem(msg)
 
         if hasattr(self, 'list_of_uuids'):
             if self.is_unique(item) is False:
@@ -79,6 +75,7 @@ class MongoDBPipeline(object):
             return False
 
     def close_spider(self,spider):
+        #check on previous scraped items
         if len(self.list_of_uuids) > 0:
             self.stats.set_value('records_not_found',0)
             self.stats.set_value('records_existing', 0)
@@ -86,49 +83,49 @@ class MongoDBPipeline(object):
             self.stats.set_value('records_expired', 0)
             self.stats.set_value('records_deleted', 0)
 
-            for i in self.list_of_uuids:
-                post = self.collection.find_one({"uuid": i})
-                # requests gets max entries
-                sleep(0.5)
-                page = requests.get(post['url'])
-                tree = html.fromstring(page.content)
-                if page.status_code == 404:
-                    self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "not-found"}})
-                    self.stats.inc_value('records_not_found')
-                elif page.status_code == 200:
-                    if len(tree.xpath('//section[@class="body"]')) > 0:
-                        if len(tree.xpath('//div[@class="postinginfos"]/p[2]/time/text()')) > 0:
-                            self.stats.inc_value('records_existing')
-                            continue
-                        elif len(tree.xpath('//div[@class="removed"]')) > 0:
-                            if "expired" in tree.xpath('//div[@class="removed"]/h2/text()')[0]:
-                                self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "expired"}})
-                                self.stats.inc_value('records_expired')
-                            elif "flagged" in tree.xpath('//div[@class="removed"]/h2/text()')[0]:
-                                self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "flagged"}})
-                                self.stats.inc_value('records_flagged')
-                            elif "deleted" in tree.xpath('//div[@class="removed"]/h2/text()')[0]:
-                                self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "deleted"}})
-                                self.stats.inc_value('records_deleted')
-                            else:    
-                                from pdb import set_trace; set_trace()
+            try:
+                for i in self.list_of_uuids:
+                    post = self.collection.find_one({"uuid": i})
+                    # requests gets max entries
+                    sleep(0.5)
+                    page = requests.get(post['url'])
+                    tree = html.fromstring(page.content)
+                    if page.status_code == 404:
+                        self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "not-found", "updated_at": datetime.now()}})
+                        self.stats.inc_value('records_not_found')
+                    elif page.status_code == 200:
+                        if len(tree.xpath('//section[@class="body"]')) > 0:
+                            if len(tree.xpath('//div[@class="postinginfos"]/p[2]/time/text()')) > 0:
+                                self.stats.inc_value('records_existing')
+                                continue
+                            elif len(tree.xpath('//div[@class="removed"]')) > 0:
+                                if "expired" in tree.xpath('//div[@class="removed"]/h2/text()')[0]:
+                                    self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "expired", "updated_at": datetime.now()}})
+                                    self.stats.inc_value('records_expired')
+                                elif "flagged" in tree.xpath('//div[@class="removed"]/h2/text()')[0]:
+                                    self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "flagged", "updated_at": datetime.now()}})
+                                    self.stats.inc_value('records_flagged')
+                                elif "deleted" in tree.xpath('//div[@class="removed"]/h2/text()')[0]:
+                                    self.collection.update({ "uuid": post['uuid']}, { "$currentDate": { "status_changed": True }, "$set": { "post_status": "deleted", "updated_at": datetime.now()}})
+                                    self.stats.inc_value('records_deleted')
+                                else:
+                                    error_msg = 'Unknown status on a removed post'
+                                    error_response = self.slack_client.send_message(error_msg, channel={"name": SLACK_CHANNEL})
+                                    self.slack_client.send_message(tree.xpath('//div[@class="removed"]/h2/text()'), thread=error_response['thread'], channel={"name": SLACK_CHANNEL})  
+                            else:
+                                error_msg = 'Unknown xpath element'
+                                error_response = self.slack_client.send_message(error_msg, channel={"name": SLACK_CHANNEL})
+                                self.slack_client.send_message(post, thread=error_response['thread'], channel={"name": SLACK_CHANNEL})
                         else:
-                            from pdb import set_trace; set_trace()
+                            error_msg = 'Unknown xpath'
+                            error_response = self.slack_client.send_message(error_msg, channel={"name": SLACK_CHANNEL})
+                            self.slack_client.send_message(post, thread=error_response['thread'], channel={"name": SLACK_CHANNEL})
                     else:
-                        from pdb import set_trace; set_trace()
-                else:
-                    from pdb import set_trace; set_trace()
+                        error_msg = 'Unknown status code'
+                        error_response = self.slack_client.send_message(error_msg, channel={"name": SLACK_CHANNEL})
+                        self.slack_client.send_message(post, thread=error_response['thread'], channel={"name": SLACK_CHANNEL})
+            except Exception as e:
+                self.slack_client.send_message(str(e), channel={"name": SLACK_CHANNEL})
 
         
         print('Closing {} spider'.format(spider.name))
-
-
-
-
-        # get_response(self)
-        # self.get_response(self)
-        # return scrapy.Request("http://www.example.com/some_page.html",
-                          # get_response)
-        # yield Request(self.posts_with_status_new[1]['url'], get_response, meta={'URL': absolute_url, 'Title': title, 'Address':address})
-
-

@@ -1,9 +1,8 @@
-
 import scrapy
 import re
 import hashlib
 from scrapy import Request
-
+from datetime import datetime
 
 class JobsSpider(scrapy.Spider):
 
@@ -86,6 +85,7 @@ class JobsSpider(scrapy.Spider):
             'region': 'San Francisco',
             'state': 'CA',
             'uuid': uuid,
+            'created_at': datetime.now()
             }
 
 
