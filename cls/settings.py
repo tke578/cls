@@ -71,6 +71,7 @@ MONGO_URI = os.environ['MONGO_URI']
 MONGODB_COLLECTION = "rooms"
 MONGODB_STATS = "stats"
 SLACK_BOT_TOKEN = os.environ['SLACK_BOT_TOKEN']
+SLACK_CHANNEL = "scraper-logs"
 #ITEM_PIPELINES = {
 #    'cls.pipelines.ClsPipeline': 300,
 #}
